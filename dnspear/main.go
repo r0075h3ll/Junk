@@ -5,14 +5,13 @@ import (
 	"fmt"
 	"flag"
 	"net"
-	"sync"
+	"os"
+	"bufio"
 )
 
-var wg sync.WaitGroup
 
 func arec(domain string) {
 	a, _ := net.LookupIP(domain)
-	defer wg.Done()
 
 	fmt.Println("\nA record:")
 	for _, ip := range a {
@@ -22,14 +21,12 @@ func arec(domain string) {
 
 func cnamerec(domain string) {
 	cname, _ := net.LookupCNAME(domain)
-	defer wg.Done()
 	fmt.Println("\nCNAME record:")
 	fmt.Println(cname)
 }
 
 func mxrec(domain string) {
 	mx, _ := net.LookupMX(domain)
-	defer wg.Done()
 	fmt.Println("\nMX record:")
 
 	for _, mxreco := range mx {
@@ -39,42 +36,52 @@ func mxrec(domain string) {
 
 func txtrec(domain string) {
 	txt, _ := net.LookupTXT(domain)
-	defer wg.Done()
 	fmt.Println("\nTXT record:")
 	fmt.Println(txt)
 }
 
 func main() {
 	var (
-		target string
+		target,targets string
 		recordType string
 	)
 	
 	flag.StringVar(&target, "d", "", "single target")
+	flag.StringVar(&targets, "l", "", "single target")
 	flag.StringVar(&recordType, "r", "all", "type of record")
 	
 	flag.Parse()
 
-	switch recordType {
-		case "mx":
-			go mxrec(target)
-			wg.Add(1)
-		case "a":
-			go arec(target)
-			wg.Add(1)
-		case "cname":
-			go cnamerec(target)
-			wg.Add(1)
-		case "txt":
-			go txtrec(target)
-			wg.Add(1)
-		default:
-			wg.Add(4)
-			go mxrec(target)
-			go arec(target)
-			go cnamerec(target)
-			go txtrec(target)
+	switcher := func(domain,record string) {
+			switch record {
+				case "mx":
+					mxrec(domain)
+				case "a":
+					arec(domain)
+				case "cname":
+					cnamerec(domain)
+				case "txt":
+					txtrec(domain)
+				default:
+					mxrec(domain)
+					arec(domain)
+					cnamerec(domain)
+					txtrec(domain)
+			}
+		}
+
+	if target != "" {
+		switcher(target,recordType)
+	} else {
+		openFile,_ := os.Open(targets)
+		reader := bufio.NewScanner(openFile)
+		reader.Split(bufio.ScanLines)
+
+		for reader.Scan() {
+			fmt.Println("\n")
+			fmt.Printf("\033[91mDOMAIN:\033[00m %s", reader.Text())
+			switcher(reader.Text(),recordType)
+		}
 	}
 
-	wg.Wait()
 }

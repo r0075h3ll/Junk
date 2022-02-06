@@ -1,4 +1,5 @@
-//a shitty Go program that pulls off DNS record(s) of a given domain using '-d'
+//a shitty Go program that uses goroutines to pull off DNS record(s
+//use -d for a single domain, use -l to specify the domain file
 package main
 
 import (
@@ -7,8 +8,10 @@ import (
 	"net"
 	"os"
 	"bufio"
+	"sync"
 )
 
+var wg sync.WaitGroup
 
 func arec(domain string) {
 	a, _ := net.LookupIP(domain)
@@ -71,16 +74,27 @@ func main() {
 		}
 
 	if target != "" {
-		switcher(target,recordType)
+		wg.Add(1)
+		go func() {
+			switcher(target,recordType)
+			wg.Done()
+		}()
+		wg.Wait()
 	} else {
 		openFile,_ := os.Open(targets)
 		reader := bufio.NewScanner(openFile)
 		reader.Split(bufio.ScanLines)
 
 		for reader.Scan() {
-			fmt.Println("\n")
-			fmt.Printf("\033[91mDOMAIN:\033[00m %s", reader.Text())
-			switcher(reader.Text(),recordType)
+			targetDomain := reader.Text()
+			fmt.Println("")
+			fmt.Printf("Domain: %s", targetDomain)
+			wg.Add(1)
+			go func() {
+				switcher(reader.Text(),recordType)
+				wg.Done()
+			}()
+			wg.Wait()
 		}
 	}
 

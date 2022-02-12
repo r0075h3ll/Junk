@@ -1,5 +1,4 @@
-//a shitty Go program that uses goroutines to pull off DNS record(s
-//use -d for a single domain, use -l to specify the domain file
+//a shitty subdomain bruteforcer
 package main
 
 import (
@@ -47,13 +46,43 @@ func main() {
 	var (
 		target,targets string
 		recordType string
+		bruteForce bool
+		domCom []string
 	)
 	
 	flag.StringVar(&target, "d", "", "single target")
 	flag.StringVar(&targets, "l", "", "single target")
 	flag.StringVar(&recordType, "r", "all", "type of record")
+	flag.BoolVar(&bruteForce, "b", false, "brute-force for subdomains")
 	
 	flag.Parse()
+
+	if target == "" && targets == "" {
+		fmt.Println("\n\tdnspear\n")
+		flag.PrintDefaults()
+	}
+
+	bruteForcer := func(target string) {
+		openFile,_ := os.Open("list.txt") //https://gist.github.com/jhaddix/86a06c5dc309d08580a018c66354a056
+		reader := bufio.NewScanner(openFile)
+		reader.Split(bufio.ScanLines)
+
+		for reader.Scan() {
+			newDomain := reader.Text() + target
+			domCom = append(domCom,newDomain)
+		}
+
+		fmt.Println("\n[!] Target: ", target)
+
+		for _,val := range domCom {
+			_,err := net.LookupIP(val)
+			if err != nil {
+				fmt.Println("[-] Domain not found: ", val)
+			} else {
+				fmt.Println("[+] Domain found: ", val)
+			}
+		}
+	}
 
 	switcher := func(domain,record string) {
 			switch record {
@@ -73,14 +102,14 @@ func main() {
 			}
 		}
 
-	if target != "" {
+	if target != "" && bruteForce == false {
 		wg.Add(1)
 		go func() {
 			switcher(target,recordType)
 			wg.Done()
 		}()
 		wg.Wait()
-	} else {
+	} else if targets != "" && bruteForce == false {
 		openFile,_ := os.Open(targets)
 		reader := bufio.NewScanner(openFile)
 		reader.Split(bufio.ScanLines)
@@ -93,6 +122,29 @@ func main() {
 			go func() {
 				switcher(reader.Text(),recordType)
 				wg.Done()
+			}()
+			wg.Wait()
+		}
+	} else if bruteForce == true {
+
+		if targets != "" {
+			openFile,_ := os.Open(targets)
+			reader := bufio.NewScanner(openFile)
+			reader.Split(bufio.ScanLines)
+
+			for reader.Scan() {
+				wg.Add(1)
+				go func() {
+					defer wg.Done()
+					bruteForcer(reader.Text())
+				}()
+				wg.Wait()
+			}
+		} else {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				bruteForcer(target)
 			}()
 			wg.Wait()
 		}

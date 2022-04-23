@@ -1,4 +1,7 @@
-<?php
+<?php include "db.php";
+
+	//this code is vulnerable to SQL Injection
+
 	if (isset($_POST['submit'])) {
 		$user = $_POST['username'];
 		$pass = $_POST['password'];
@@ -8,7 +11,17 @@
 
 		if ($connection) {
 		} else {
-			die(); //connection failed
+			die();
+		}
+
+		$check = "SELECT * FROM user WHERE username = '$user'";
+		$checkUsername = mysqli_query($connection, $check);
+
+		while ($row = mysqli_fetch_assoc($checkUsername)) {
+			if ($user == $row['username']) {
+				echo "<script>alert('Username not available');</script>";
+				die();
+			}
 		}
 
 		$query = "INSERT INTO user(username, password) "; 
@@ -17,7 +30,7 @@
 		$result = mysqli_query($connection, $query);
 
 		if (!$result) {
-			die(); 
+			die();
 		}
 	}
 ?>

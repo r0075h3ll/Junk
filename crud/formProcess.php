@@ -1,13 +1,10 @@
-<?php include "db.php";
+<?php include 'db.php';
 
 	//this code is vulnerable to SQL Injection
 
 	if (isset($_POST['submit'])) {
 		$user = $_POST['username'];
 		$pass = $_POST['password'];
-
-
-		$connection = mysqli_connect('localhost', 'root', '', 'loginapp'); //making connection to the database
 
 		if ($connection) {
 		} else {

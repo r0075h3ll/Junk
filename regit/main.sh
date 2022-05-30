@@ -1,9 +1,9 @@
-githubInfo=$1
-target=$2
-lang=$3
-query=$4
+githubInfo=$1 #github_access_token
+target=$2 #somedomain.com
+lang=$3 #python, javascript, etc.
+query=$4 #api_key, passwd, etc.
 
-result=`curl -s -u $githubInfo https://api.github.com/search/code?q=\"$target\"+$query+in:file+language:$lang&s=indexed`
+result=`curl -s -H "Authorization: token $githubInfo" https://api.github.com/search/code?q=\"$target\"+$query+in:file+language:$lang&s=indexed`
 resultCount=`echo $result | jq '.total_count'`
 
 if [[ $? -ne 0 ]]; then
@@ -24,8 +24,3 @@ do
 		echo $url >> link_to_files.txt
 	fi
 done
-
-
-if [ -f "link_to_files.txt" ]; then
-	sort -u link_to_files.txt -o link_to_files.txt
-fi
